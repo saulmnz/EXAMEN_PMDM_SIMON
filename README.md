@@ -1,24 +1,24 @@
-package com.example.examen_pmdm_simon.ui
+# SHAREDPREFERENCES 🦠
 
-import android.app.Application
-import android.content.Context
-import androidx.compose.runtime.*
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.examen_pmdm_simon.data.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+> [!NOTE]
+> ***Guarda datos de forma ligera en android usando un sistema de clave-valor***
 
+- ***CLAVE: Un string que identifica el dato.***
+- ***VALOR: El dato real que se guarda, puede ser de varios tipos (String, Int, Boolean, etc).***
+- ***APPLY(): Realiza el guardado de forma asíncrona en segundo plano, evitando bloquear la interfaz de usuario***
+
+ ## CÓMO LO IMPLEMENTAS:
+
+> [!TIP]
+> ***Esto es todo el código implementado en la clase viewmodel base***
+
+```kotlin
 class MyViewModel(application: Application) : AndroidViewModel(application) {
-
 
     // SHARED PREFERENCES
     // NOMBRE DEL ARCHIVO
     private val PREFS_NAME = "simon_dice_prefs"
+    
     // CLAVES PARA IDENTIFICAR LOS DATOS QUE GUARDAREMOS
     private val KEY_RECORD = "ronda_mas_alta"
     private val KEY_FECHA = "fecha_record"
@@ -29,23 +29,14 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
 
     // NUEVO ESTADO PARA MOSTRAR LA FECHA DEL RÉCORD - ESTADO REACTIVO
     var fechaRecord by mutableStateOf("")
-
-
-    // ESTADOS REACTIVOS (La UI se repinta sola cuando cambian)
-    var ronda by mutableStateOf(0)
-    var recordEnMemoria by mutableStateOf(0)
-    var estadoActual by mutableStateOf(EstadoJuego.INICIO)
-    var colorIluminado by mutableStateOf<Colores?>(null)
-
-    private val secuenciaSimon = mutableListOf<Colores>()
-    private var indiceUsuario = 0
-
-
+    
+    
     // INICIALIZACIÓN
     init{
         // LLAMAMOS AL MÉTODO PARA RECUPERAR LOS DATOS GUARDADOS EN CUANTO SE CREA EL VIEWMODEL
         cargarDatos()
     }
+    
 
     private fun cargarDatos(){
         // LEEMOS EL VALOR DEL RÉCORD, SI NO EXISTE SE ASIGNA 0 POR DEFECTO
@@ -66,52 +57,11 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
         // GUARDAMOS LOS CAMBIOS DE FORMA ASÍNCRONA PARA NO BLOQUEAR EL HILO PRINCIPAL
         editor.apply()
     }
+    
+    // RESTO LÓGICA DEL VIEWMODEL...
 
-
-    fun iniciarJuego() {
-        secuenciaSimon.clear()
-        ronda = 0
-        siguienteRonda()
-    }
-
-    private fun siguienteRonda() {
-        indiceUsuario = 0
-        ronda++
-        secuenciaSimon.add(Colores.values().random())
-        reproducirSecuencia()
-    }
-
-    private fun reproducirSecuencia() {
-        viewModelScope.launch {
-            estadoActual = EstadoJuego.REPRODUCIENDO
-            delay(500) // Pausa antes de empezar
-            for (color in secuenciaSimon) {
-                colorIluminado = color
-                delay(Constantes.VELOCIDAD_MUESTRA)
-                colorIluminado = null
-                delay(Constantes.PAUSA_ENTRE_COLORES)
-            }
-            estadoActual = EstadoJuego.ESPERANDO
-        }
-    }
-
-    fun respuestaUsuario(colorPulsado: Colores) {
-        if (estadoActual != EstadoJuego.ESPERANDO) return
-
-        if (colorPulsado == secuenciaSimon[indiceUsuario]) {
-            // Acierto
-            indiceUsuario++
-            if (indiceUsuario == secuenciaSimon.size) {
-                // Ha completado toda la secuencia
-                actualizarRecord()
-                siguienteRonda()
-            }
-        } else {
-            // Error
-            estadoActual = EstadoJuego.GAME_OVER
-        }
-    }
-
+    
+    // AL FINAL...
     private fun actualizarRecord() {
 
         // COMPROBAMOS SI LA RONDA ACTUAL SUPERA AL RÉCORD GUARDADO EN MEMORIA
@@ -131,3 +81,66 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 }
+
+```
+
+---
+
+> [!TIP]
+> ***Resto del código del viewmodel base para el juego simon dice antes de implementarle shared preference***
+
+```kotlin
+
+// ESTADOS REACTIVOS (La UI se repinta sola cuando cambian)
+var ronda by mutableStateOf(0)
+var recordEnMemoria by mutableStateOf(0)
+var estadoActual by mutableStateOf(EstadoJuego.INICIO)
+var colorIluminado by mutableStateOf<Colores?>(null)
+private val secuenciaSimon = mutableListOf<Colores>()
+private var indiceUsuario = 0
+
+fun iniciarJuego() {
+    secuenciaSimon.clear()
+    ronda = 0
+    siguienteRonda()
+}
+
+private fun siguienteRonda() {
+    indiceUsuario = 0
+    ronda++
+    secuenciaSimon.add(Colores.values().random())
+    reproducirSecuencia()
+}
+
+private fun reproducirSecuencia() {
+    viewModelScope.launch {
+        estadoActual = EstadoJuego.REPRODUCIENDO
+        delay(500) // Pausa antes de empezar
+        for (color in secuenciaSimon) {
+            colorIluminado = color
+            delay(Constantes.VELOCIDAD_MUESTRA)
+            colorIluminado = null
+            delay(Constantes.PAUSA_ENTRE_COLORES)
+        }
+        estadoActual = EstadoJuego.ESPERANDO
+    }
+}
+
+fun respuestaUsuario(colorPulsado: Colores) {
+    if (estadoActual != EstadoJuego.ESPERANDO) return
+
+    if (colorPulsado == secuenciaSimon[indiceUsuario]) {
+        // Acierto
+        indiceUsuario++
+        if (indiceUsuario == secuenciaSimon.size) {
+            // Ha completado toda la secuencia
+            actualizarRecord()
+            siguienteRonda()
+        }
+    } else {
+        // Error
+        estadoActual = EstadoJuego.GAME_OVER
+    }
+}
+
+```
