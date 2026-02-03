@@ -1,13 +1,27 @@
 package com.example.examen_pmdm_simon.ui
 
+import android.app.Application
+import android.util.Log
 import androidx.compose.runtime.*
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.examen_pmdm_simon.data.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-class MyViewModel : ViewModel() {
+// CAMBIAMOS A AndroidViewModel PARA PASAR EL CONTEXTO AL HELPER
+class MyViewModel(application: Application) : AndroidViewModel(application) {
+
+
+    // INSTANCIAMOS EL HELPER DE SQLITE PASÁNDOLE EL CONTEXTO DE LA APP
+    private val dbHelper = SimonDatabaseHelper(application)
+    // FECHA DEL RÉCORD ACTUAL
+    var fechaRecord by mutableStateOf("")
+
 
     // ESTADOS REACTIVOS (La UI se repinta sola cuando cambian)
     var ronda by mutableStateOf(0)
@@ -17,6 +31,16 @@ class MyViewModel : ViewModel() {
 
     private val secuenciaSimon = mutableListOf<Colores>()
     private var indiceUsuario = 0
+
+
+    init {
+        // AL CARGAR EL VIEWMODEL, BUSCAMOS EL RÉCORD MÁXIMO EN LA BASE DE DATOS SQLITE
+        recordEnMemoria = dbHelper.obtenerMaximoRecord()
+        fechaRecord = dbHelper.obtenerFechaDelRecord(recordEnMemoria)
+
+        Log.d("SQLITE_SIMON", "DATOS CARGADOS AL INICIO: Récord $recordEnMemoria ($fechaRecord)")
+
+    }
 
     fun iniciarJuego() {
         secuenciaSimon.clear()
@@ -63,8 +87,17 @@ class MyViewModel : ViewModel() {
     }
 
     private fun actualizarRecord() {
+        // VERIFICAMOS SI LA RONDA ACTUAL SUPERA EL RÉCORD HISTÓRICO
         if (ronda > recordEnMemoria) {
             recordEnMemoria = ronda
+
+            // GENERAMOS LA FECHA Y HORA DEL MOMENTO ACTUAL
+            val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+            val fechaActual = sdf.format(Date())
+            fechaRecord = fechaActual
+
+            // GUARDAMOS EL NUEVO RÉCORD Y LA FECHA EN LA TABLA SQLITE
+            dbHelper.insertarRecord(recordEnMemoria, fechaActual)
         }
     }
 }
