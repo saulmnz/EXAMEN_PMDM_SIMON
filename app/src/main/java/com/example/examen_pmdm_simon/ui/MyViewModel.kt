@@ -135,4 +135,10 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
             actualizarListaUsuariosUI() // REFRESCAMOS PANTALLA
         }
     }
+
+    // MËTODO NUEVO PARA PROBAR EL BORRADO TOTAL
+    fun borrarTodosLosUsuarios() {
+        dbHelper.borrarTodosLosUsuarios()
+        actualizarListaUsuariosUI()
+    }
 }

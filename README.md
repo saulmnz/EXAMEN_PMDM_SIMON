@@ -399,3 +399,62 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
     }
 }
 ```
+
+---
+
+### PROBAR LOS MÉTODOS 
+
+```kotlin
+// FUNCIÓN QUE PRUEBA TODOS LOS MÉTODOS Y LOGUEA EL RESULTADO
+    private fun ejecutarPruebasDeConsola() {
+        val TAG = "SQLITE_TEST_TOTAL"
+        Log.i(TAG, "---- INICIANDO BATERÍA DE PRUEBAS ----")
+
+        // PRUEBA 1: INSERTAR RECORD MANUALMENTE
+        // Probamos el método insertarRecord()
+        dbHelper.insertarRecord(999, "01/01/2099 Test") 
+        Log.d(TAG, "1. Insertar Récord Falso (999): OK")
+
+        // PRUEBA 2: OBTENER ESE RECORD POR ID (Suponemos que es un ID alto o el último)
+        // Probamos obtenerRecordPorId()
+        // Nota: Si es la primera vez, el ID 1 existirá. Si no, busca uno genérico.
+        val recordRecuperado = dbHelper.obtenerRecordPorId(1)
+        Log.d(TAG, "2. Obtener Record ID 1: $recordRecuperado")
+
+        // PRUEBA 3: LEER EL MÁXIMO (Debería ser 999 si acabamos de insertarlo y es el mayor)
+        // Probamos obtenerMaximoRecord()
+        val maximo = dbHelper.obtenerMaximoRecord()
+        Log.d(TAG, "3. Obtener Máximo (Esperado >= 999): $maximo")
+
+        // PRUEBA 4: GESTIÓN DE USUARIOS (INSERTAR Y BORRAR)
+        // A) Insertamos uno para borrarlo
+        dbHelper.insertarUsuario("USUARIO_FANTASMA")
+        Log.d(TAG, "4A. Usuario Fantasma insertado")
+
+        // B) Leemos la lista para encontrar su ID (Probamos obtenerTodosLosUsuarios)
+        val lista = dbHelper.obtenerTodosLosUsuarios() // Devuelve strings "ID: Nombre"
+        Log.d(TAG, "4B. Lista actual leída: ${lista.size} usuarios")
+        
+        // Buscamos el ID del fantasma para probar el borrado
+        val usuarioFantasma = lista.find { it.contains("USUARIO_FANTASMA") }
+        if (usuarioFantasma != null) {
+            // Extraemos el ID del String "5: USUARIO_FANTASMA"
+            val idFantasma = usuarioFantasma.substringBefore(":").toInt()
+            
+            // C) Probamos borrarUsuarioPorId()
+            val filas = dbHelper.borrarUsuarioPorId(idFantasma)
+            Log.d(TAG, "4C. Borrar Usuario ID $idFantasma: Filas afectadas = $filas (Debería ser 1)")
+        } else {
+            Log.e(TAG, "4C. Error: No se encontró al usuario fantasma para borrarlo")
+        }
+
+        // PRUEBA 5: BORRADO TOTAL (CUIDADO: ESTO BORRA TODO SI LO DESCOMENTAS)
+        // dbHelper.borrarTodosLosUsuarios()
+        // Log.w(TAG, "5. Borrado total ejecutado (Método Probado)")
+
+        Log.i(TAG, "---- FIN DE PRUEBAS ----")
+        
+        // Limpieza visual: volvemos a cargar la lista real en pantalla
+        actualizarListaUsuariosUI()
+    }
+```
