@@ -23,6 +23,9 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
     var fechaRecord by mutableStateOf("")
 
 
+    // MOSTRAR LISTA DE USUARIOS DESDE SQLITE
+    var listaUsuariosTexto by mutableStateOf("CARGANDO USUARIOS...")
+
     // ESTADOS REACTIVOS (La UI se repinta sola cuando cambian)
     var ronda by mutableStateOf(0)
     var recordEnMemoria by mutableStateOf(0)
@@ -37,8 +40,11 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
         // AL CARGAR EL VIEWMODEL, BUSCAMOS EL RÉCORD MÁXIMO EN LA BASE DE DATOS SQLITE
         recordEnMemoria = dbHelper.obtenerMaximoRecord()
         fechaRecord = dbHelper.obtenerFechaDelRecord(recordEnMemoria)
-
-        Log.d("SQLITE_SIMON", "DATOS CARGADOS AL INICIO: Récord $recordEnMemoria ($fechaRecord)")
+        inicializarDatosPrueba()
+        actualizarListaUsuariosUI()
+        val pruebaId = dbHelper.obtenerRecordPorId(1)
+        // Log.d("SQLITE_SIMON", "DATOS CARGADOS AL INICIO: Récord $recordEnMemoria ($fechaRecord)")
+        Log.d("SQLITE_SIMON", "Prueba getRecordById(1): $pruebaId")
 
     }
 
@@ -73,15 +79,15 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
         if (estadoActual != EstadoJuego.ESPERANDO) return
 
         if (colorPulsado == secuenciaSimon[indiceUsuario]) {
-            // Acierto
+            // ACIERTO
             indiceUsuario++
             if (indiceUsuario == secuenciaSimon.size) {
-                // Ha completado toda la secuencia
+                // SI SE COMPLETA LA RONDA, COMPROBAMOS SI HAY QUE GUARDAR RÉCORD
                 actualizarRecord()
                 siguienteRonda()
             }
         } else {
-            // Error
+            // ERROR -> FIN DEL JUEGO
             estadoActual = EstadoJuego.GAME_OVER
         }
     }
@@ -98,6 +104,35 @@ class MyViewModel(application: Application) : AndroidViewModel(application) {
 
             // GUARDAMOS EL NUEVO RÉCORD Y LA FECHA EN LA TABLA SQLITE
             dbHelper.insertarRecord(recordEnMemoria, fechaActual)
+        }
+    }
+
+    // FUNCION AUXILIAR
+    private fun inicializarDatosPrueba() {
+        val usuarios = dbHelper.obtenerTodosLosUsuarios()
+        if (usuarios.isEmpty()) {
+            dbHelper.insertarUsuario("TESTER 1")
+            dbHelper.insertarUsuario("PROFE 1")
+            Log.d("SQLITE_SIMON", "Datos de prueba insertados en tabla_usuarios")
+        }
+    }
+
+    fun actualizarListaUsuariosUI() {
+        val lista = dbHelper.obtenerTodosLosUsuarios()
+        // CONVERTIMOS LA LISTA [Usuario(1, "Pepe"), Usuario(2, "Juan")] EN ["1: Pepe", "2: Juan"] A STRING
+        listaUsuariosTexto = if (lista.isNotEmpty()) lista.joinToString("\n") else "Sin usuarios"
+    }
+
+    // AGREGA UN USUARIO
+    fun registrarUsuarioNuevo(nombre: String) {
+        dbHelper.insertarUsuario(nombre)
+        actualizarListaUsuariosUI() // REFRESCAMOS LA LISTA
+    }
+
+    fun eliminarUsuario(id: Int) {
+        val borrados = dbHelper.borrarUsuarioPorId(id)
+        if (borrados > 0) {
+            actualizarListaUsuariosUI() // REFRESCAMOS PANTALLA
         }
     }
 }

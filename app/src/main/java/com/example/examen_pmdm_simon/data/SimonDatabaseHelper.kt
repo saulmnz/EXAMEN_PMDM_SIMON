@@ -13,7 +13,7 @@ class SimonDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
         // NOMBRE DEL ARCHIVO DE LA BASE DE DATOS
         private const val DATABASE_NAME = "SimonGame.db"
         // VERSIÓN DE LA BASE DE DATOS
-        private const val DATABASE_VERSION = 1
+        private const val DATABASE_VERSION = 2
 
         // DEFINICIÓN DE LA TABLA Y SUS COLUMNAS PARA EL RÉCORD Y LA FECHA
         // NOMBRE TABLA
@@ -22,24 +22,37 @@ class SimonDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
         const val COLUMN_ID = "id"
         const val COLUMN_RONDA = "ronda"
         const val COLUMN_FECHA = "fecha"
+
+
+        // NUEVA TABLA DE USUARIOS
+        const val TABLE_USUARIOS = "tabla_usuarios"
+        const val COLUMN_USER_ID = "id"
+        const val COLUMN_USER_NOMBRE = "nombre"
     }
 
     // SE EJECUTA AUTOMÁTICAMENTE LA PRIMERA VEZ QUE SE ACCEDE A LA BASE DE DATOS
     override fun onCreate(db: SQLiteDatabase?) {
         // DEFINIMOS LA SENTENCIA SQL PARA CREAR LA TABLA DE RÉCORDS
-        val createTableQuery = ("CREATE TABLE $TABLE_RECORDS (" +
-                "$COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT, " + // ID AUTONUMÉRICO
-                "$COLUMN_RONDA INTEGER, " +                         // COLUMNA PARA LA RONDA MÁS ALTA
-                "$COLUMN_FECHA TEXT)")                             // COLUMNA PARA LA FECHA DEL LOGRO
+        val createRecords = ("CREATE TABLE $TABLE_RECORDS (" +
+                "$COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "$COLUMN_RONDA INTEGER, " +
+                "$COLUMN_FECHA TEXT)")
+        db?.execSQL(createRecords)
 
-        // EJECUTAMOS LA CREACIÓN DE LA TABLA
-        db?.execSQL(createTableQuery)
+        // DEFINIMOS LA SENTENCIA SQL PARA CREAR LA TABLA DE USUARIOS
+        val createUsers = ("CREATE TABLE $TABLE_USUARIOS (" +
+                "$COLUMN_USER_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "$COLUMN_USER_NOMBRE TEXT)")
+        db?.execSQL(createUsers)
+
+        Log.d("SQLITE_SIMON", "TABLAS CREADAS: Records y Usuarios")
     }
 
     // SE EJECUTA SI SE DETECTA UNA VERSIÓN DE DATABASE_VERSION SUPERIOR A LA INSTALADA
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
         // ELIMINAMOS LA TABLA SI YA EXISTÍA PARA EVITAR CONFLICTOS
         db?.execSQL("DROP TABLE IF EXISTS $TABLE_RECORDS")
+        db?.execSQL("DROP TABLE IF EXISTS $TABLE_USUARIOS")
         // VOLVEMOS A CREARLA VACÍA
         onCreate(db)
     }
@@ -111,4 +124,86 @@ class SimonDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
         cursor.close()
         return fechaEncontrada
     }
+
+    fun insertarUsuario(nombre: String) {
+        val db = this.writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_USER_NOMBRE, nombre)
+        }
+        db.insert(TABLE_USUARIOS, null, values)
+        Log.d("SQLITE_SIMON", "USUARIO INSERTADO: $nombre")
+        db.close()
+    }
+
+    fun obtenerTodosLosUsuarios(): List<String>{
+
+        // SE CREA LA LISTA DE USUARIOS A DEVOLVER
+        val listaUsuarios = ArrayList<String>()
+
+        // INSTANCIAMOS LA BASE DE DATOS EN MODO LECTURA
+        val db = this.readableDatabase
+
+        // REALIZAMOS LA CONSULTA PARA OBTENER TODOS LOS USUARIOS
+        val cursor = db.rawQuery("SELECT * FROM $TABLE_USUARIOS", null)
+
+        // RECORREMOS EL CURSOR Y AÑADIMOS CADA USUARIO A LA LISTA
+        if (cursor.moveToFirst()){
+            do {
+                val nombre = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_NOMBRE))
+                val id = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_USER_ID))
+                listaUsuarios.add("$id: $nombre")
+            } while (cursor.moveToNext())
+        }
+        cursor.close()
+        return listaUsuarios
+    }
+
+
+    // MÉTODO PARA OBTENER UN RÉCORD COMPLETO (RONDA Y FECHA) A PARTIR DE SU ID
+    fun obtenerRecordPorId(id: Int): String {
+        val db = this.readableDatabase
+        // EXAMEN: SELECT * FROM tabla WHERE id = ?
+        val cursor = db.rawQuery("SELECT * FROM $TABLE_RECORDS WHERE $COLUMN_ID = ?", arrayOf(id.toString()))
+
+        var resultado = "NO ENCONTRADO"
+        if (cursor.moveToFirst()) {
+            val ronda = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_RONDA))
+            val fecha = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_FECHA))
+            resultado = "Ronda: $ronda ($fecha)"
+        }
+        cursor.close()
+        return resultado
+    }
+
+    // EXAMEN: BORRAR USUARIO POR ID
+    fun borrarUsuarioPorId(id: Int): Int {
+
+        // ABRIMOS LA BD EN MODO ESCRITURA
+        val db = this.writableDatabase
+
+        val whereClause = "$COLUMN_USER_ID = ?"
+        val whereArgs = arrayOf(id.toString())
+
+        // EJECUUAMOS EL BORRADO Y OBTENEMOS EL NÚMERO DE FILAS AFECTADAS
+        val filasAfectadas = db.delete(TABLE_USUARIOS, whereClause, whereArgs)
+
+        // LOGUEAMOS EL RESULTADO
+        if (filasAfectadas > 0) {
+            Log.d("SQLITE_SIMON", "USUARIO CON ID: $id ELIMINADO.")
+        } else {
+            Log.e("SQLITE_SIMON", "NO SE PUDO BORRAR")
+        }
+
+        db.close()
+        return filasAfectadas
+    }
+
+    // BORRAR TODO (RESET)
+    fun borrarTodosLosUsuarios() {
+        val db = this.writableDatabase
+        db.delete(TABLE_USUARIOS, null, null)
+        Log.d("SQLITE_SIMON", "TODOS LOS USUARIOS ELIMINADOS.")
+        db.close()
+    }
+
 }
