@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 // LISTAMOS LAS ENTIDADES (TABLAS)
+// PARA METER MÁS TABLAS, SIMPLEMENTE SEPARARLAS POR COMAS DENTRO DE LOS CORCHETES
 @Database(entities = [RecordEntity::class], version = 1)
 abstract class SimonDatabase : RoomDatabase() {
 
